@@ -12,7 +12,7 @@
             <value>
                 <fullName>Native</fullName>
                 <default>true</default>
-                <label>Native (.docx / .pptx)</label>
+                <label>Native (.docx / .pptx / .xlsx)</label>
             </value>
             <value>
                 <fullName>PDF</fullName>

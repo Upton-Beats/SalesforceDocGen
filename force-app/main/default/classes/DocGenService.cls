@@ -33,6 +33,7 @@ public with sharing class DocGenService {
     /**
      * Core merge logic: processes template tags in DOCX/PPTX XML and collects results.
      * Returns structured intermediate data without assembling into a final format.
+     * For Excel templates, delegates to DocGenExcelService instead.
      */
     private static MergeResult mergeTemplate(Id templateId, Id recordId) {
         return mergeTemplate(templateId, recordId, null);
@@ -278,6 +279,20 @@ public with sharing class DocGenService {
      * fetched by the browser (which has session access to Salesforce URLs).
      */
     public static Map<String, Object> processDocument(Id templateId, Id recordId, Map<String, String> resolvedImages) {
+        // Check if this is an Excel template — route to dedicated service
+        List<DocGen_Template__c> tmplTypeCheck = [
+            SELECT Type__c FROM DocGen_Template__c WHERE Id = :templateId WITH SYSTEM_MODE LIMIT 1
+        ];
+        if (!tmplTypeCheck.isEmpty() && tmplTypeCheck[0].Type__c == 'Excel') {
+            Map<String, Object> dataMap;
+            try {
+                dataMap = DocGenController.generateDocumentData(templateId, recordId);
+            } catch (Exception e) {
+                throw new DocGenException('Error retrieving template data: ' + e.getMessage());
+            }
+            return processExcelDocument(dataMap);
+        }
+
         MergeResult mr = mergeTemplate(templateId, recordId, resolvedImages);
         Blob resultBlob = assembleZip(mr);
 
@@ -286,6 +301,40 @@ public with sharing class DocGenService {
             'title' => mr.docTitle,
             'outputFormat' => mr.outputFormat,
             'templateType' => mr.templateType
+        };
+    }
+
+    /**
+     * Processes an Excel template using DocGenExcelService.
+     * Excel templates use {tag} syntax in cells with ZIP round-trip processing.
+     */
+    private static Map<String, Object> processExcelDocument(Map<String, Object> dataMap) {
+        String base64File = (String) dataMap.get('templateFile');
+        Object dataObj = dataMap.get('data');
+        String outputFormat = (String) dataMap.get('outputFormat');
+
+        if (base64File == null) throw new DocGenException('Template file content is missing.');
+
+        Map<String, Object> recordDataMap;
+        if (dataObj instanceof Map<String, Object>) {
+            recordDataMap = (Map<String, Object>) dataObj;
+        } else if (dataObj instanceof SObject) {
+            recordDataMap = ((SObject) dataObj).getPopulatedFieldsAsMap();
+        } else {
+            throw new DocGenException('Invalid data format.');
+        }
+
+        Blob templateBlob = EncodingUtil.base64Decode(base64File);
+        Blob resultBlob = DocGenExcelService.processExcelTemplate(templateBlob, recordDataMap);
+
+        String docTitle = generateDocTitle((String) dataMap.get('titleFormat'), recordDataMap);
+        if (docTitle == null) docTitle = (String) resolveValue(recordDataMap, 'Name');
+
+        return new Map<String, Object>{
+            'blob' => resultBlob,
+            'title' => docTitle,
+            'outputFormat' => outputFormat,
+            'templateType' => 'Excel'
         };
     }
 
@@ -304,6 +353,9 @@ public with sharing class DocGenService {
         ];
         if (templates.isEmpty()) return;
         String templateType = templates[0].Type__c;
+
+        // Excel templates don't use the same image extraction pipeline
+        if (templateType == 'Excel') return;
 
         Blob templateBlob = EncodingUtil.base64Decode(fileContent);
         Compression.ZipReader reader = new Compression.ZipReader(templateBlob);
@@ -382,7 +434,7 @@ public with sharing class DocGenService {
     public static Map<String, Object> processDocumentAsHtml(Id templateId, Id recordId) {
         MergeResult mr = mergeTemplate(templateId, recordId);
 
-        if (mr.templateType == 'PowerPoint') {
+        if (mr.templateType == 'PowerPoint' || mr.templateType == 'Excel') {
             throw new DocGenException('Server-side PDF generation is only supported for Word templates.');
         }
 
@@ -406,7 +458,7 @@ public with sharing class DocGenService {
     public static Map<String, Object> preparePdfImages(Id templateId, Id recordId) {
         MergeResult mr = mergeTemplate(templateId, recordId);
 
-        if (mr.templateType == 'PowerPoint') {
+        if (mr.templateType == 'PowerPoint' || mr.templateType == 'Excel') {
             throw new DocGenException('Server-side PDF generation is only supported for Word templates.');
         }
 
@@ -542,7 +594,7 @@ public with sharing class DocGenService {
     public static Map<String, Object> processDocumentAsHtmlWithImageMap(Id templateId, Id recordId, Map<String, String> imageMap) {
         MergeResult mr = mergeTemplate(templateId, recordId);
 
-        if (mr.templateType == 'PowerPoint') {
+        if (mr.templateType == 'PowerPoint' || mr.templateType == 'Excel') {
             throw new DocGenException('Server-side PDF generation is only supported for Word templates.');
         }
 
@@ -574,7 +626,7 @@ public with sharing class DocGenService {
     public static Map<String, Object> generatePdfDirect(Id templateId, Id recordId) {
         MergeResult mr = mergeTemplate(templateId, recordId);
 
-        if (mr.templateType == 'PowerPoint') {
+        if (mr.templateType == 'PowerPoint' || mr.templateType == 'Excel') {
             throw new DocGenException('Server-side PDF generation is only supported for Word templates.');
         }
 
@@ -633,6 +685,17 @@ public with sharing class DocGenService {
      * Returns ContentDocumentId.
      */
     public static Id generateDocument(Id templateId, Id recordId) {
+        // Check for Excel template — use dedicated path
+        List<DocGen_Template__c> tmplCheck = [
+            SELECT Type__c FROM DocGen_Template__c WHERE Id = :templateId WITH SYSTEM_MODE LIMIT 1
+        ];
+        if (!tmplCheck.isEmpty() && tmplCheck[0].Type__c == 'Excel') {
+            Map<String, Object> result = processDocument(templateId, recordId, null);
+            Blob xlsxBlob = (Blob) result.get('blob');
+            String title = (String) result.get('title');
+            return saveFile(xlsxBlob, title, recordId, 'Native', 'Excel');
+        }
+
         MergeResult mr = mergeTemplate(templateId, recordId);
 
         if (mr.outputFormat == 'PDF' && mr.templateType == 'Word') {
@@ -1538,7 +1601,14 @@ public with sharing class DocGenService {
         ContentVersion cv = new ContentVersion();
         String baseName = title != null ? title : 'Generated_Document';
 
-        String ext = (type == 'PowerPoint') ? '.pptx' : '.docx';
+        String ext;
+        if (type == 'PowerPoint') {
+            ext = '.pptx';
+        } else if (type == 'Excel') {
+            ext = '.xlsx';
+        } else {
+            ext = '.docx';
+        }
         cv.Title = baseName;
         cv.PathOnClient = baseName + ext;
         cv.VersionData = fileBlob;

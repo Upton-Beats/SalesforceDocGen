@@ -249,19 +249,22 @@ const VERSION_COLUMNS = [
     get typeOptions() {
         return [
             { label: 'Word', value: 'Word' },
-            { label: 'PowerPoint', value: 'PowerPoint' }
+            { label: 'PowerPoint', value: 'PowerPoint' },
+            { label: 'Excel', value: 'Excel' }
         ];
     }
 
     get outputFormatOptions() {
         return [
-            { label: 'Native (.docx / .pptx)', value: 'Native' },
+            { label: 'Native (.docx / .pptx / .xlsx)', value: 'Native' },
             { label: 'PDF', value: 'PDF' }
         ];
     }
 
     get acceptedFormats() {
-        return this.editTemplateType === 'PowerPoint' ? ['.pptx'] : ['.docx'];
+        if (this.editTemplateType === 'PowerPoint') return ['.pptx'];
+        if (this.editTemplateType === 'Excel') return ['.xlsx'];
+        return ['.docx'];
     }
 
     // --- Create Logic ---
@@ -536,8 +539,9 @@ const VERSION_COLUMNS = [
             }
 
             const isPPT = ['PowerPoint', 'PPT', 'PPTX'].includes(this.previewVersion.Type__c);
+            const isExcel = this.previewVersion.Type__c === 'Excel';
 
-            if (isPPT || this.editTemplateOutputFormat === 'Native') {
+            if (isPPT || isExcel || this.editTemplateOutputFormat === 'Native') {
                 const result = await processAndReturnDocument({
                     templateId: this.editTemplateId,
                     recordId: this.editTemplateTestRecordId
@@ -546,7 +550,7 @@ const VERSION_COLUMNS = [
                     throw new Error('Document generation returned empty result.');
                 }
                 const docTitle = 'Preview_' + this.previewVersion.VersionNumber + '_' + (result.title || 'Document');
-                const ext = isPPT ? '.pptx' : '.docx';
+                const ext = isExcel ? '.xlsx' : (isPPT ? '.pptx' : '.docx');
                 this.downloadBase64(result.base64, docTitle + ext, 'application/octet-stream');
                 this.showToast('Success', 'Sample document generated for ' + this.previewVersion.VersionNumber, 'success');
             } else {
@@ -658,9 +662,10 @@ const VERSION_COLUMNS = [
 
         try {
             const isPPT = ['PowerPoint', 'PPT', 'PPTX'].includes(this.editTemplateType);
+            const isExcel = this.editTemplateType === 'Excel';
 
-            if (isPPT || this.editTemplateOutputFormat === 'Native') {
-                // Native DOCX/PPTX download
+            if (isPPT || isExcel || this.editTemplateOutputFormat === 'Native') {
+                // Native DOCX/PPTX/XLSX download
                 const result = await processAndReturnDocument({
                     templateId: this.editTemplateId,
                     recordId: this.editTemplateTestRecordId
@@ -671,7 +676,7 @@ const VERSION_COLUMNS = [
                 }
 
                 const docTitle = 'Sample_' + (result.title || 'Document');
-                const ext = isPPT ? '.pptx' : '.docx';
+                const ext = isExcel ? '.xlsx' : (isPPT ? '.pptx' : '.docx');
                 this.downloadBase64(result.base64, docTitle + ext, 'application/octet-stream');
                 this.showToast('Success', 'Sample Document Downloaded', 'success');
             } else {

@@ -92,7 +92,8 @@ export default class DocGenRunner extends LightningElement {
             const selected = this._templateData.find(t => t.Id === this.selectedTemplateId);
             const templateType = selected ? selected.Type__c : 'Word';
             const isPPT = templateType === 'PowerPoint';
-            const isPDF = this.templateOutputFormat === 'PDF' && !isPPT;
+            const isExcel = templateType === 'Excel';
+            const isPDF = this.templateOutputFormat === 'PDF' && !isPPT && !isExcel;
 
             if (isPDF) {
                 this.showToast('Info', 'Generating PDF...', 'info');
@@ -123,7 +124,7 @@ export default class DocGenRunner extends LightningElement {
                     throw new Error('Document generation returned empty result.');
                 }
 
-                const ext = isPPT ? 'pptx' : 'docx';
+                const ext = isExcel ? 'xlsx' : (isPPT ? 'pptx' : 'docx');
                 const docTitle = result.title || 'Document';
 
                 if (this.outputMode === 'save') {
@@ -137,7 +138,8 @@ export default class DocGenRunner extends LightningElement {
                     this.showToast('Success', `${ext.toUpperCase()} saved to record.`, 'success');
                 } else {
                     this.downloadBase64(result.base64, docTitle + '.' + ext, 'application/octet-stream');
-                    this.showToast('Success', `${isPPT ? 'PowerPoint' : 'Word document'} downloaded.`, 'success');
+                    const typeLabel = isExcel ? 'Excel spreadsheet' : (isPPT ? 'PowerPoint' : 'Word document');
+                    this.showToast('Success', `${typeLabel} downloaded.`, 'success');
                 }
                 this.isLoading = false;
             }
