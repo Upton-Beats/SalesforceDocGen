@@ -117,8 +117,7 @@ public with sharing class DocGenExcelService {
                 result += xml.substring(cursor);
                 break;
             }
-            String loopKey = xml.substring(loopTagStart + 1, tagClose).trim(); // e.g. "#ContactList"
-            String key = loopKey.substring(1); // Remove '#'
+            String key = xml.substring(loopTagStart + 1, tagClose).trim(); // e.g. "ContactList"
 
             // Find matching end tag {/key}
             String endTag = '{/' + key + '}';
@@ -158,7 +157,7 @@ public with sharing class DocGenExcelService {
 
             // Extract the row template (without loop tags)
             String rowTemplate = xml.substring(rowStart, rowEnd);
-            String startTagFull = '{' + loopKey + '}';
+            String startTagFull = '{#' + key + '}';
             String endTagFull = endTag;
             rowTemplate = rowTemplate.replace(startTagFull, '');
             rowTemplate = rowTemplate.replace(endTagFull, '');
@@ -329,8 +328,9 @@ public with sharing class DocGenExcelService {
                 if (dateFormat != null && val instanceof DateTime) {
                     strVal = ((DateTime) val).format(dateFormat);
                 } else if (dateFormat != null && val instanceof Date) {
-                    DateTime dt = DateTime.newInstance((Date) val, Time.newInstance(0, 0, 0, 0));
-                    strVal = dt.format(dateFormat);
+                    Date d = (Date) val;
+                    DateTime dt = DateTime.newInstanceGmt(d.year(), d.month(), d.day(), 0, 0, 0);
+                    strVal = dt.formatGmt(dateFormat);
                 } else if (val instanceof Date) {
                     Date d = (Date) val;
                     String mm = (d.month() < 10 ? '0' : '') + d.month();

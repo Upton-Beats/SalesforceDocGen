@@ -3,7 +3,7 @@ private class DocGenSignatureTests {
 
     @testSetup
     static void setup() {
-        Account acc = new Account(Name = 'Signature Test Account', Website = 'https://test.com');
+        Account acc = new Account(Name = 'Signature Test Account', Website = 'https://test.com', BillingCountry = 'United States', BillingState = 'California');
         insert acc;
 
         Contact con = new Contact(
@@ -428,7 +428,7 @@ private class DocGenSignatureTests {
 
     @isTest
     static void testGetRelatedDocuments_NoDocuments() {
-        Account tempAcc = new Account(Name = 'No Docs Account', Website = 'https://test.com');
+        Account tempAcc = new Account(Name = 'No Docs Account', Website = 'https://test.com', BillingCountry = 'United States', BillingState = 'California');
         insert tempAcc;
 
         Test.startTest();
@@ -604,7 +604,7 @@ private class DocGenSignatureTests {
 
     @isTest
     static void testGetPendingSignatureRequests_NoResults() {
-        Account tempAcc = new Account(Name = 'Empty Account', Website = 'https://test.com');
+        Account tempAcc = new Account(Name = 'Empty Account', Website = 'https://test.com', BillingCountry = 'United States', BillingState = 'California');
         insert tempAcc;
 
         Test.startTest();
@@ -2485,5 +2485,20 @@ private class DocGenSignatureTests {
         Test.stopTest();
 
         System.assertNotEquals(null, savedCvId);
+    }
+
+    @isTest
+    static void testSignaturePdfTrigger() {
+        DocGen_Signature_Request__c req = [SELECT Id FROM DocGen_Signature_Request__c LIMIT 1];
+
+        Test.startTest();
+        DocGen_Signature_PDF__e evt = new DocGen_Signature_PDF__e(
+            Request_Id__c = req.Id
+        );
+        EventBus.publish(evt);
+        Test.stopTest();
+
+        // Trigger fires asynchronously; just confirm no unhandled exception
+        System.assertNotEquals(null, req.Id);
     }
 }

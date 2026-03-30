@@ -11,7 +11,8 @@ private class DocGenBulkTests {
 
         Account a = new Account(
             Name = 'Test Account',
-            Website = 'https://www.example.com'
+            Website = 'https://www.example.com',
+            BillingCountry = 'United States', BillingState = 'California'
         );
         insert a;
     }

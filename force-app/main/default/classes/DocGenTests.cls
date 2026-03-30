@@ -13,7 +13,7 @@ private class DocGenTests {
         insert tpl;
         
         // Create Account
-        Account acc = new Account(Name = 'Test Account', AccountSource = 'Web', Website = 'https://www.example.com');
+        Account acc = new Account(Name = 'Test Account', AccountSource = 'Web', Website = 'https://www.example.com', BillingCountry = 'United States', BillingState = 'California');
         insert acc;
         
         // Create ContentVersion (File)

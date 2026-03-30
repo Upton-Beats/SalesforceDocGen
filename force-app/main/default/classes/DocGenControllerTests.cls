@@ -14,7 +14,8 @@ private class DocGenControllerTests {
         Account acc = new Account(
             Name = 'Controller Test Account',
             AccountSource = 'Web',
-            Website = 'https://test.com'
+            Website = 'https://test.com',
+            BillingCountry = 'United States', BillingState = 'California'
         );
         insert acc;
     }
@@ -1200,7 +1201,7 @@ private class DocGenControllerTests {
         update tpl;
 
         Account acc = [SELECT Id FROM Account WHERE Name = 'Controller Test Account' LIMIT 1];
-        insert new Contact(FirstName = 'Test', LastName = 'Child', AccountId = acc.Id);
+        insert new Contact(FirstName = 'Test', LastName = 'Child', AccountId = acc.Id, Email = 'test@test.com');
 
         Compression.ZipWriter zw = new Compression.ZipWriter();
         zw.addEntry('[Content_Types].xml', Blob.valueOf(

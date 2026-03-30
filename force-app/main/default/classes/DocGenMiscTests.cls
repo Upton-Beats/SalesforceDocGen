@@ -3,7 +3,7 @@ private class DocGenMiscTests {
 
     @testSetup
     static void setup() {
-        Account acc = new Account(Name = 'Misc Test Account', AccountSource = 'Web', Website = 'https://test.com');
+        Account acc = new Account(Name = 'Misc Test Account', AccountSource = 'Web', Website = 'https://test.com', BillingCountry = 'United States', BillingState = 'California');
         insert acc;
 
         DocGen_Template__c tpl = new DocGen_Template__c(
@@ -608,7 +608,7 @@ private class DocGenMiscTests {
 
         // Add a contact to the account
         Account acc = [SELECT Id FROM Account LIMIT 1];
-        insert new Contact(FirstName = 'Loop', LastName = 'Tester', AccountId = acc.Id);
+        insert new Contact(FirstName = 'Loop', LastName = 'Tester', AccountId = acc.Id, Email = 'loop@test.com');
 
         String docXml =
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -633,7 +633,7 @@ private class DocGenMiscTests {
         update tpl;
 
         Account acc = [SELECT Id FROM Account LIMIT 1];
-        insert new Contact(FirstName = 'Row', LastName = 'Expand', AccountId = acc.Id);
+        insert new Contact(FirstName = 'Row', LastName = 'Expand', AccountId = acc.Id, Email = 'row@test.com');
 
         String docXml =
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -806,7 +806,7 @@ private class DocGenMiscTests {
     static void testGetRecordDataWithSubquery() {
         // Exercises the subquery (parenthesized SELECT) branch in field parsing
         Account acc = [SELECT Id FROM Account LIMIT 1];
-        insert new Contact(FirstName = 'Sub', LastName = 'Query', AccountId = acc.Id);
+        insert new Contact(FirstName = 'Sub', LastName = 'Query', AccountId = acc.Id, Email = 'sub@test.com');
 
         Test.startTest();
         Map<String, Object> result = DocGenDataRetriever.getRecordData(acc.Id, 'Account', 'Name, (SELECT FirstName, LastName FROM Contacts)');
@@ -1729,8 +1729,8 @@ private class DocGenMiscTests {
 
         Account acc = [SELECT Id FROM Account LIMIT 1];
         insert new List<Contact>{
-            new Contact(FirstName = 'Alice', LastName = 'Smith', AccountId = acc.Id),
-            new Contact(FirstName = 'Bob', LastName = 'Jones', AccountId = acc.Id)
+            new Contact(FirstName = 'Alice', LastName = 'Smith', AccountId = acc.Id, Email = 'alice@test.com'),
+            new Contact(FirstName = 'Bob', LastName = 'Jones', AccountId = acc.Id, Email = 'bob@test.com')
         };
 
         String docXml =
@@ -1788,7 +1788,7 @@ private class DocGenMiscTests {
         update tpl;
 
         Account acc = [SELECT Id FROM Account LIMIT 1];
-        insert new Contact(FirstName = 'Multi', LastName = 'Row', AccountId = acc.Id);
+        insert new Contact(FirstName = 'Multi', LastName = 'Row', AccountId = acc.Id, Email = 'multi@test.com');
 
         String docXml =
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +

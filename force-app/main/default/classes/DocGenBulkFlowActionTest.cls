@@ -10,8 +10,8 @@ private class DocGenBulkFlowActionTest {
         );
         insert temp;
 
-        insert new Account(Name = 'Test Account 1', Website = 'https://test1.com');
-        insert new Account(Name = 'Test Account 2', Website = 'https://test2.com');
+        insert new Account(Name = 'Test Account 1', Website = 'https://test1.com', BillingCountry = 'United States', BillingState = 'California');
+        insert new Account(Name = 'Test Account 2', Website = 'https://test2.com', BillingCountry = 'United States', BillingState = 'California');
     }
 
     @isTest
